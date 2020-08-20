@@ -2,6 +2,7 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 import os
+import json
 from flask import Flask, request, jsonify, url_for
 from flask_migrate import Migrate
 from flask_swagger import swagger
@@ -20,6 +21,20 @@ db.init_app(app)
 CORS(app)
 setup_admin(app)
 
+users = [
+    {
+        "name": "Georgi",
+        "todos": [
+            {
+                "label": "My first task", "done": "false"
+            },
+            {
+                "label": "My second task", "done": "false"
+            }
+        ]
+    }
+]
+
 # Handle/serialize errors like a JSON object
 @app.errorhandler(APIException)
 def handle_invalid_usage(error):
@@ -30,14 +45,24 @@ def handle_invalid_usage(error):
 def sitemap():
     return generate_sitemap(app)
 
-@app.route('/user', methods=['GET'])
-def handle_hello():
+@app.route('/todos/user/<username>', methods=['GET'])
+def get_todos(username):
+    for user in users:
+        if user["name"] == username:
+            user_todos = user["todos"]
+    return jsonify(user_todos), 200
 
-    response_body = {
-        "msg": "Hello, this is your GET /user response "
-    }
+@app.route('/todos/user/<username>', methods=['POST'])
+def post_todos(username):
+    request_body = request.data
+    print('Incoming request with the following body: ', request.data)
+    decoded_data = json.loads(request_body)
 
-    return jsonify(response_body), 200
+    for i in range(0, len(users)):
+        if users[i]["name"] == username:
+            users[i]["todos"].append(decoded_data)
+    return jsonify(users[i]["todos"]), 200
+
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
